@@ -94,9 +94,11 @@
 
     <section id="formView" class="form-card" hidden>
 
-      <div class="icon">💊</div>
-
-      <h1>ลงทะเบียนรับยา</h1>
+      <div class="clinical-form-header">
+        <div class="icon">💊</div>
+        <span class="form-section-title">MEDICINE BOX</span>
+        <h1>ลงทะเบียนรับยา</h1>
+      </div>
 
       <p class="subtitle">
         กรุณากรอกข้อมูลเพื่อส่งคำขอรับยา
@@ -105,7 +107,8 @@
 
       <form id="medicineForm">
 
-        <!-- รหัสนักศึกษา -->
+        <p class="clinical-note">กรอกข้อมูลให้ครบถ้วนเพื่อส่งคำขอรับยา</p>
+
         <div class="form-group">
           <label for="studentId">
             1. รหัสประจำตัวนักศึกษา
@@ -123,7 +126,6 @@
           >
         </div>
 
-        <!-- ชื่อ -->
         <div class="form-group">
           <label for="name">
             2. ชื่อ-นามสกุล
@@ -140,7 +142,6 @@
           >
         </div>
 
-        <!-- ชั้น / ห้อง -->
         <div class="form-group">
           <label for="room">
             3. ชั้น / ห้อง
@@ -155,57 +156,9 @@
           >
         </div>
 
-        <!-- เลือกยา -->
-        <div class="form-group">
-          <label for="medicine">
-            4. ชนิดยา
-          </label>
-
-          <select id="medicine" required>
-            <option value="">-- เลือกชนิดยา --</option>
-            <option value="paracetamol">พาราเซตามอล</option>
-            <option value="allergy">ยาแก้แพ้</option>
-            <option value="cough">ยาแก้ไอ</option>
-          </select>
-        </div>
-
-        <!-- ข้อมูลผลิตภัณฑ์ -->
-        <section
-          id="medicineInfo"
-          class="medicine-info"
-          hidden
-        >
-
-          <h3 id="medicineInfoTitle">
-            ข้อมูลผลิตภัณฑ์
-          </h3>
-
-          <p id="medicineInfoDescription"></p>
-
-          <div class="status-label">
-            <span class="status-dot"></span>
-
-            <span id="medicineInfoStatus">
-              ข้อมูลรอตรวจสอบ
-            </span>
-          </div>
-
-          <div
-            id="medicineInfoDetails"
-            class="medicine-details"
-          ></div>
-
-          <p class="medicine-warning">
-            ข้อมูลผลิตภัณฑ์และฉลากยังไม่ได้รับการยืนยัน
-            เว็บไซต์นี้เป็นระบบต้นแบบ ไม่ใช่คำแนะนำในการใช้ยา
-          </p>
-
-        </section>
-
-        <!-- อาการ -->
         <div class="form-group">
           <label for="symptom">
-            5. อาการเบื้องต้น
+            4. อาการเบื้องต้น
           </label>
 
           <textarea
@@ -217,7 +170,16 @@
           ></textarea>
         </div>
 
-        <!-- ปุ่มส่งข้อมูล -->
+        <div class="form-group">
+          <label for="medicine">5. ชนิดยา</label>
+          <select id="medicine" required>
+            <option value="">-- เลือกชนิดยา --</option>
+            <option value="paracetamol">พาราเซตามอล</option>
+            <option value="allergy">ยาแก้แพ้</option>
+            <option value="cough">ยาแก้ไอ</option>
+          </select>
+        </div>
+
         <button type="submit" id="submitBtn">
           ส่งคำขอให้เจ้าหน้าที่ตรวจสอบ
         </button>
@@ -288,11 +250,6 @@
         <div class="summary-row">
           <span>ชั้น / ห้อง</span>
           <strong id="successRoom">-</strong>
-        </div>
-
-        <div class="summary-row">
-          <span>ชนิดยา</span>
-          <strong id="successMedicine">-</strong>
         </div>
 
         <div class="summary-row summary-symptom">
