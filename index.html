@@ -31,11 +31,12 @@
 
       <div class="icon">🪪</div>
 
-      <h1>สมัครใช้งาน</h1>
+      <h1>เข้าสู่ระบบ</h1>
 
       <p class="subtitle">
-        สมัครด้วยชื่อและรหัสประจำตัวนักศึกษา
-        เพื่อเริ่มลงทะเบียนขอรับยา
+        MEDICINE BOX
+        <br>
+        ระบบลงทะเบียนรับยาของวิทยาลัย
       </p>
 
       <form id="registrationForm">
@@ -65,12 +66,27 @@
           >
         </div>
 
-        <button type="submit" id="registrationSubmitButton">
-          สมัครและเข้าสู่ระบบ
-        </button>
+        <div class="form-group">
+          <label for="registrationProgram">สาขาวิชา</label>
+          <input type="text" id="registrationProgram" placeholder="กรอกสาขาวิชา" maxlength="100" required>
+        </div>
+
+        <div class="form-group">
+          <label for="registrationLevel">ระดับชั้น</label>
+          <input type="text" id="registrationLevel" placeholder="เช่น ปวช.3" maxlength="50" required>
+        </div>
+
+        <div class="form-group">
+          <label for="registrationPhone">เบอร์โทรติดต่อ</label>
+          <input type="tel" id="registrationPhone" placeholder="เช่น 0812345678" maxlength="15" inputmode="tel" required>
+        </div>
 
         <button type="button" id="loginButton" class="secondary-button">
-          เป็นสมาชิกแล้ว เข้าสู่ระบบ
+          เข้าสู่ระบบ
+        </button>
+
+        <button type="submit" id="registrationSubmitButton">
+          สมัครสมาชิก
         </button>
 
       </form>
@@ -84,6 +100,8 @@
 
       <div class="notice">
         ใช้ชื่อและรหัสที่ถูกต้องของตนเองเท่านั้น
+        <br>
+        ระบบของเราอยู่ภายใต้การดูแลของเจ้าหน้าที่ห้องพยาบาลของวิทยาลัย
       </div>
 
     </section>
@@ -104,6 +122,13 @@
         กรุณากรอกข้อมูลเพื่อส่งคำขอรับยา
         เจ้าหน้าที่จะตรวจสอบก่อนดำเนินการ
       </p>
+
+      <section id="memberProfile" class="notice">
+        <strong>ข้อมูลสมาชิก</strong><br>
+        <span id="profileName">-</span> · <span id="profileStudentId">-</span><br>
+        <span id="profileProgram">-</span> · <span id="profileLevel">-</span><br>
+        <span id="profilePhone">-</span>
+      </section>
 
       <form id="medicineForm">
 
@@ -161,24 +186,14 @@
             4. อาการเบื้องต้น
           </label>
 
-          <textarea
-            id="symptom"
-            rows="4"
-            maxlength="500"
-            placeholder="อธิบายอาการเบื้องต้นของคุณ..."
-            required
-          ></textarea>
-        </div>
-
-        <div class="form-group">
-          <label for="medicine">5. ชนิดยา</label>
-          <select id="medicine" required>
-            <option value="">-- เลือกชนิดยา --</option>
-            <option value="paracetamol">พาราเซตามอล</option>
-            <option value="allergy">ยาแก้แพ้</option>
-            <option value="cough">ยาแก้ไอ</option>
+          <select id="symptom" required>
+            <option value="">-- เลือกอาการ --</option>
+            <option value="headache">ปวดหัว (ให้เจ้าหน้าที่พิจารณาพาราเซตามอล)</option>
+            <option value="stomachache">ปวดท้อง/ท้องอืด (ให้เจ้าหน้าที่พิจารณายาแก้ท้องอืด)</option>
           </select>
         </div>
+
+        <input type="hidden" id="medicine">
 
         <button type="submit" id="submitBtn">
           ส่งคำขอให้เจ้าหน้าที่ตรวจสอบ
@@ -198,6 +213,8 @@
       <div class="notice">
         หมายเหตุ: ระบบบันทึกคำขอเพื่อรอการตรวจสอบ
         ไม่ใช่ระบบจ่ายยาอัตโนมัติ
+        <br>
+        เป็นการดูแลอาการเบื้องต้น หากมีอาการรุนแรงให้แจ้งเจ้าหน้าที่ประจำห้องพยาบาลทันที
       </div>
 
     </section>

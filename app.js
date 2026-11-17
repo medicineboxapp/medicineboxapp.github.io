@@ -1,25 +1,489 @@
-const SCRIPT_URL="https://script.google.com/macros/s/AKfycbz_tASkriYHt3K4bHQrXs-MSwaEZTzKlViYlSXezHpP1NOhwtfV0Z4EodJRXhqFHpAsUw/exec";
-const FIREBASE_COMMAND_URL="https://medicine-box-realtime-test-default-rtdb.asia-southeast1.firebasedatabase.app/devices/medicine-box-001/command.json";
-const medicineData={paracetamol:{name:"พาราเซตามอล"},allergy:{name:"ยาแก้แพ้"},cough:{name:"ยาแก้ไอ"}};
-const medicineForm=document.getElementById("medicineForm"),medicineSelect=document.getElementById("medicine"),message=document.getElementById("message"),submitButton=document.getElementById("submitBtn"),formView=document.getElementById("formView"),successView=document.getElementById("successView"),backButton=document.getElementById("backButton"),registrationView=document.getElementById("registrationView"),registrationForm=document.getElementById("registrationForm"),registrationName=document.getElementById("registrationName"),registrationStudentId=document.getElementById("registrationStudentId"),registrationSubmitButton=document.getElementById("registrationSubmitButton"),loginButton=document.getElementById("loginButton"),registrationMessage=document.getElementById("registrationMessage"),signOutButton=document.getElementById("signOutButton");
-const MEMBER_STORAGE_KEY="medicineBoxMember";let currentSubmissionId=null;
-const cleanId=v=>String(v||"").replace(/[\s\u200B-\u200D\uFEFF-]/g,"");
-const validId=v=>/^\d{5,15}$/.test(cleanId(v));
-function showRegistrationMessage(t,type){registrationMessage.textContent=t;registrationMessage.className="message "+type}
-function showRegistrationView(){registrationView.hidden=false;formView.hidden=true;successView.hidden=true;signOutButton.hidden=true}
-function showRequestView(m){document.getElementById("studentId").value=m.studentId;document.getElementById("name").value=m.name;registrationView.hidden=true;formView.hidden=false;successView.hidden=true;signOutButton.hidden=false}
-function saveMember(m){localStorage.setItem(MEMBER_STORAGE_KEY,JSON.stringify({name:m.name,studentId:m.studentId}))}
-function getSavedMember(){try{const m=JSON.parse(localStorage.getItem(MEMBER_STORAGE_KEY));return m&&m.name&&m.studentId?m:null}catch{return null}}
-async function postAction(action,data={}){const body=new URLSearchParams({action,...data});const response=await fetch(SCRIPT_URL,{method:"POST",mode:"cors",redirect:"follow",body});if(!response.ok)throw new Error("เซิร์ฟเวอร์ไม่สามารถรับข้อมูลได้");const result=await response.json();if(!result.success)throw new Error(result.message||"ไม่สามารถดำเนินการได้");return result}
-async function queueFirebaseLedTest(requestId){const r=await fetch(FIREBASE_COMMAND_URL,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({commandId:"LED-"+requestId,command:"TEST_LED",status:"queued",queuedAt:Date.now()})});if(!r.ok)throw new Error("ไม่สามารถส่งคำสั่งทดสอบไปยังตู้ยาได้")}
-async function registerMember(name,studentId){name=String(name||"").trim();studentId=cleanId(studentId);if(!name)throw new Error("กรุณากรอกชื่อ-นามสกุล");if(!validId(studentId))throw new Error("รหัสนักศึกษาต้องเป็นตัวเลข 5-15 หลัก");const r=await postAction("register",{name,studentId}),m=r.member||{name,studentId};saveMember(m);showRequestView(m)}
-async function loginMember(name,studentId){name=String(name||"").trim();studentId=cleanId(studentId);if(!name||!validId(studentId))throw new Error("กรุณากรอกชื่อและรหัสนักศึกษาให้ถูกต้อง");const m=(await postAction("member",{studentId})).member;if(!m||m.name!==name||m.studentId!==studentId)throw new Error("ชื่อ-นามสกุลหรือรหัสนักศึกษาไม่ตรงกับข้อมูลสมาชิก");saveMember(m);showRequestView(m)}
-async function restoreMemberSession(){const m=getSavedMember();if(!m)return showRegistrationView();try{const verified=(await postAction("member",{studentId:m.studentId})).member;if(!verified)throw new Error();saveMember(verified);showRequestView(verified)}catch(e){showRegistrationView();if(e instanceof TypeError||/fetch|network/i.test(String(e.message||"")))showRegistrationMessage("ไม่สามารถเชื่อมต่อระบบได้ โปรดลองใหม่เมื่อมีอินเทอร์เน็ต","warning");else{localStorage.removeItem(MEMBER_STORAGE_KEY);showRegistrationMessage("กรุณาสมัครใช้งานก่อนลงทะเบียนรับยา","warning")}}}
-function signOut(){localStorage.removeItem(MEMBER_STORAGE_KEY);registrationForm.reset();showRegistrationMessage("","");showRegistrationView()}
-registrationForm.addEventListener("submit",async e=>{e.preventDefault();if(registrationSubmitButton.disabled)return;registrationSubmitButton.disabled=true;registrationSubmitButton.textContent="กำลังสมัคร...";try{await registerMember(registrationName.value,registrationStudentId.value);showRegistrationMessage("","")}catch(e){showRegistrationMessage(e.message||"ไม่สามารถสมัครได้","error")}finally{registrationSubmitButton.disabled=false;registrationSubmitButton.textContent="สมัครและเข้าสู่ระบบ"}});
-loginButton.addEventListener("click",async()=>{if(loginButton.disabled)return;loginButton.disabled=true;try{await loginMember(registrationName.value,registrationStudentId.value);showRegistrationMessage("","")}catch(e){showRegistrationMessage(e.message||"ไม่สามารถเข้าสู่ระบบได้","error")}finally{loginButton.disabled=false}});signOutButton.addEventListener("click",signOut);
-medicineForm.addEventListener("input",()=>currentSubmissionId=null);medicineForm.addEventListener("change",()=>currentSubmissionId=null);
-medicineForm.addEventListener("submit",async e=>{e.preventDefault();if(submitButton.disabled)return;const studentId=document.getElementById("studentId").value.trim(),name=document.getElementById("name").value.trim(),room=document.getElementById("room").value.trim(),medicine=medicineSelect.value,symptom=document.getElementById("symptom").value.trim();if(!studentId||!name||!room||!medicine||!symptom)return showMessage("กรุณากรอกข้อมูลให้ครบทุกช่อง","error");if(!validId(studentId)||!medicineData[medicine])return showMessage("ข้อมูลไม่ถูกต้อง","error");currentSubmissionId||=(crypto.randomUUID?crypto.randomUUID():"MB-"+Date.now());submitButton.disabled=true;submitButton.textContent="กำลังตรวจสอบ...";showMessage("ระบบกำลังตรวจสอบเงื่อนไข กรุณารอสักครู่...","warning");try{const r=await postAction("saveRequest",{submissionId:currentSubmissionId,studentId,name,room,medicine,symptom});if(r.deviceTest==="queued")try{await queueFirebaseLedTest(r.requestId)}catch(x){console.error("FIREBASE LED TEST ERROR:",x)}currentSubmissionId=null;showSuccessPage({requestId:r.requestId,remaining:r.remaining,unlimitedQuota:r.unlimitedQuota,message:r.message,deviceTest:r.deviceTest,name,room,symptom})}catch(e){showMessage(e.message||"เกิดข้อผิดพลาด กรุณาลองอีกครั้ง","error")}finally{submitButton.disabled=false;submitButton.textContent="ส่งคำขอให้เจ้าหน้าที่ตรวจสอบ"}});
-function showSuccessPage(d){document.getElementById("successRequestId").textContent=d.requestId||"-";document.getElementById("successName").textContent=d.name;document.getElementById("successRoom").textContent=d.room;document.getElementById("successSymptom").textContent=d.symptom;const r=document.getElementById("successRemaining");if(r)r.textContent=d.unlimitedQuota?"ไม่จำกัด (บัญชีทดสอบ)":d.remaining+" รายการ";const led=d.deviceTest==="queued"?"กำลังทดสอบการเชื่อมต่อกับตู้ยา (ไฟ LED เท่านั้น)":"";document.getElementById("successServerMessage").textContent=[d.message,led].filter(Boolean).join(" ");formView.hidden=true;successView.hidden=false;scrollTo({top:0,behavior:"smooth"})}
-backButton.addEventListener("click",()=>{const m=getSavedMember();document.getElementById("room").value="";medicineSelect.value="";document.getElementById("symptom").value="";currentSubmissionId=null;message.textContent="";message.className="message";m?showRequestView(m):showRegistrationView();scrollTo({top:0,behavior:"smooth"})});
-function showMessage(t,type){message.textContent=t;message.className="message "+type}window.MedicineBox={registerMember,loginMember,restoreMemberSession,signOut};restoreMemberSession();
+
+const SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbz_tASkriYHt3K4bHQrXs-MSwaEZTzKlViYlSXezHpP1NOhwtfV0Z4EodJRXhqFHpAsUw/exec";
+
+// Temporary Firebase test channel: LED only. No student or health data is sent here.
+const FIREBASE_COMMAND_URL =
+  "https://medicine-box-realtime-test-default-rtdb.asia-southeast1.firebasedatabase.app/devices/medicine-box-001/command.json";
+
+const medicineData = {
+  paracetamol: { name: "พาราเซตามอล" },
+  carminative: { name: "ยาแก้ท้องอืด (รอเจ้าหน้าที่พิจารณา)" },
+  allergy: { name: "ยาแก้แพ้" },
+  cough: { name: "ยาแก้ไอ" }
+};
+
+const symptomCareMap = {
+  headache: { medicine: "paracetamol", label: "ปวดหัว" },
+  stomachache: { medicine: "carminative", label: "ปวดท้อง/ท้องอืด" }
+};
+
+const medicineForm = document.getElementById("medicineForm");
+const medicineSelect = document.getElementById("medicine");
+
+const message = document.getElementById("message");
+const submitButton = document.getElementById("submitBtn");
+
+const formView = document.getElementById("formView");
+const successView = document.getElementById("successView");
+const backButton = document.getElementById("backButton");
+const registrationView = document.getElementById("registrationView");
+const registrationForm = document.getElementById("registrationForm");
+const registrationName = document.getElementById("registrationName");
+const registrationStudentId = document.getElementById("registrationStudentId");
+const registrationProgram = document.getElementById("registrationProgram");
+const registrationLevel = document.getElementById("registrationLevel");
+const registrationPhone = document.getElementById("registrationPhone");
+const registrationSubmitButton = document.getElementById("registrationSubmitButton");
+const loginButton = document.getElementById("loginButton");
+const registrationMessage = document.getElementById("registrationMessage");
+const signOutButton = document.getElementById("signOutButton");
+
+const MEMBER_STORAGE_KEY = "medicineBoxMember";
+
+// เก็บรหัสเดิมไว้เมื่อส่งข้อมูลแล้วเครือข่ายขัดข้อง
+let currentSubmissionId = null;
+
+function normalizeStudentId(studentId) {
+  return String(studentId || "").replace(/[\s\u200B-\u200D\uFEFF-]/g, "");
+}
+
+function isValidStudentId(studentId) {
+  return /^\d{5,15}$/.test(normalizeStudentId(studentId));
+}
+
+async function postAction(action, data = {}) {
+  const formData = new URLSearchParams();
+  formData.append("action", action);
+
+  Object.entries(data).forEach(function ([key, value]) {
+    formData.append(key, value);
+  });
+
+  const response = await fetch(SCRIPT_URL, {
+    method: "POST",
+    mode: "cors",
+    redirect: "follow",
+    body: formData
+  });
+
+  if (!response.ok) {
+    throw new Error("เซิร์ฟเวอร์ไม่สามารถรับข้อมูลได้");
+  }
+
+  const result = await response.json();
+
+  if (!result.success) {
+    throw new Error(result.message || "ไม่สามารถดำเนินการได้");
+  }
+
+  return result;
+}
+
+async function queueFirebaseLedTest(requestId) {
+  if (!requestId) {
+    throw new Error("ไม่พบรหัสคำขอสำหรับการทดสอบตู้ยา");
+  }
+
+  const response = await fetch(FIREBASE_COMMAND_URL, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      commandId: "LED-" + requestId,
+      command: "TEST_LED",
+      status: "queued",
+      queuedAt: Date.now()
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error("ไม่สามารถส่งคำสั่งทดสอบไปยังตู้ยาได้");
+  }
+}
+
+function showRegistrationMessage(text, type) {
+  registrationMessage.textContent = text;
+  registrationMessage.className = "message " + type;
+}
+
+function showRegistrationView() {
+  registrationView.hidden = false;
+  formView.hidden = true;
+  successView.hidden = true;
+  signOutButton.hidden = true;
+}
+
+function showRequestView(member) {
+  document.getElementById("studentId").value = member.studentId;
+  document.getElementById("name").value = member.name;
+  document.getElementById("profileName").textContent = member.name;
+  document.getElementById("profileStudentId").textContent = member.studentId;
+  document.getElementById("profileProgram").textContent = member.program || "-";
+  document.getElementById("profileLevel").textContent = member.level || "-";
+  document.getElementById("profilePhone").textContent = member.phone || "-";
+
+  registrationView.hidden = true;
+  formView.hidden = false;
+  successView.hidden = true;
+  signOutButton.hidden = false;
+}
+
+function saveMemberSession(member) {
+  localStorage.setItem(MEMBER_STORAGE_KEY, JSON.stringify(member));
+}
+
+function getSavedMember() {
+  try {
+    const stored = localStorage.getItem(MEMBER_STORAGE_KEY);
+    if (!stored) return null;
+
+    const member = JSON.parse(stored);
+    if (!member.name || !member.studentId) return null;
+    return member;
+  } catch (error) {
+    return null;
+  }
+}
+
+function clearRequestFields() {
+  document.getElementById("room").value = "";
+  medicineSelect.value = "";
+  document.getElementById("symptom").value = "";
+  currentSubmissionId = null;
+}
+
+async function registerMember(name, studentId, program, level, phone) {
+  const cleanName = String(name || "").trim();
+  const cleanStudentId = normalizeStudentId(studentId);
+  const cleanProgram = String(program || "").trim();
+  const cleanLevel = String(level || "").trim();
+  const cleanPhone = String(phone || "").replace(/\D/g, "");
+
+  if (!cleanName) {
+    throw new Error("กรุณากรอกชื่อ-นามสกุล");
+  }
+
+  if (!isValidStudentId(cleanStudentId)) {
+    throw new Error("รหัสนักศึกษาต้องเป็นตัวเลข 5-15 หลัก");
+  }
+  if (!cleanProgram || !cleanLevel || !/^\d{9,15}$/.test(cleanPhone)) {
+    throw new Error("กรุณากรอกสาขาวิชา ระดับชั้น และเบอร์โทรให้ถูกต้อง");
+  }
+
+  const result = await postAction("register", {
+    name: cleanName,
+    studentId: cleanStudentId,
+    program: cleanProgram,
+    level: cleanLevel,
+    phone: cleanPhone
+  });
+
+  const member = result.member || {
+    name: cleanName,
+    studentId: cleanStudentId
+  };
+
+  saveMemberSession(member);
+  showRequestView(member);
+}
+
+async function loginMember(studentId, phone) {
+  const cleanStudentId = normalizeStudentId(studentId);
+
+  const cleanPhone = String(phone || "").replace(/\D/g, "");
+
+  if (!isValidStudentId(cleanStudentId)) {
+    throw new Error("รหัสนักศึกษาต้องเป็นตัวเลข 5-15 หลัก");
+  }
+
+  if (!/^\d{9,15}$/.test(cleanPhone)) throw new Error("กรุณากรอกเบอร์โทรให้ถูกต้อง");
+  const result = await postAction("member", { studentId: cleanStudentId, phone: cleanPhone });
+  const member = result.member;
+
+  if (!member || member.studentId !== cleanStudentId) {
+    throw new Error("รหัสนักศึกษาหรือเบอร์โทรไม่ตรงกับข้อมูลสมาชิก");
+  }
+
+  saveMemberSession(member);
+  showRequestView(member);
+}
+
+async function restoreMemberSession() {
+  const stored = localStorage.getItem(MEMBER_STORAGE_KEY);
+
+  if (!stored) {
+    showRegistrationView();
+    return;
+  }
+
+  try {
+    const member = JSON.parse(stored);
+
+    const sessionPhone = String(member && member.phone || "").replace(/\D/g, "");
+
+    if (!member || !isValidStudentId(member.studentId) || !/^\d{9,15}$/.test(sessionPhone)) {
+      throw new Error("ข้อมูลสมาชิกไม่ถูกต้อง");
+    }
+
+    const result = await postAction("member", {
+      studentId: member.studentId,
+      phone: sessionPhone
+    });
+    const verifiedMember = result.member;
+
+    if (!verifiedMember || !verifiedMember.name || !isValidStudentId(verifiedMember.studentId)) {
+      throw new Error("ไม่พบข้อมูลสมาชิก");
+    }
+
+    saveMemberSession(verifiedMember);
+    showRequestView(verifiedMember);
+  } catch (error) {
+    showRegistrationView();
+
+    if (error instanceof TypeError || /fetch|network/i.test(String(error.message || ""))) {
+      showRegistrationMessage("ไม่สามารถเชื่อมต่อระบบได้ โปรดลองใหม่เมื่อมีอินเทอร์เน็ต", "warning");
+      return;
+    }
+
+    localStorage.removeItem(MEMBER_STORAGE_KEY);
+    showRegistrationMessage("กรุณาสมัครใช้งานก่อนลงทะเบียนรับยา", "warning");
+  }
+}
+
+function signOut() {
+  localStorage.removeItem(MEMBER_STORAGE_KEY);
+  registrationForm.reset();
+  showRegistrationMessage("", "");
+  showRegistrationView();
+}
+
+registrationForm.addEventListener("submit", async function (event) {
+  event.preventDefault();
+
+  if (registrationSubmitButton.disabled) return;
+
+  registrationSubmitButton.disabled = true;
+  registrationSubmitButton.textContent = "กำลังสมัคร...";
+  showRegistrationMessage("กำลังบันทึกข้อมูลสมาชิก...", "warning");
+
+  try {
+    await registerMember(registrationName.value, registrationStudentId.value, registrationProgram.value, registrationLevel.value, registrationPhone.value);
+    showRegistrationMessage("", "");
+  } catch (error) {
+    showRegistrationMessage(error.message || "ไม่สามารถสมัครได้", "error");
+  } finally {
+    registrationSubmitButton.disabled = false;
+    registrationSubmitButton.textContent = "สมัครสมาชิก";
+  }
+});
+
+signOutButton.addEventListener("click", signOut);
+
+medicineForm.addEventListener("input", function () {
+  currentSubmissionId = null;
+});
+
+medicineForm.addEventListener("change", function () {
+  currentSubmissionId = null;
+});
+
+loginButton.addEventListener("click", async function () {
+  if (loginButton.disabled) return;
+
+  loginButton.disabled = true;
+  showRegistrationMessage("กำลังตรวจสอบข้อมูลสมาชิก...", "warning");
+
+  try {
+    await loginMember(registrationStudentId.value, registrationPhone.value);
+    showRegistrationMessage("", "");
+  } catch (error) {
+    showRegistrationMessage(error.message || "ไม่สามารถเข้าสู่ระบบได้", "error");
+  } finally {
+    loginButton.disabled = false;
+  }
+});
+
+// ==========================================
+// ส่งคำขอและรับผลอัตโนมัติ
+// ==========================================
+
+medicineForm.addEventListener("submit", async function (event) {
+  event.preventDefault();
+
+  if (submitButton.disabled) return;
+
+  const studentId =
+    document.getElementById("studentId").value.trim();
+
+  const studentName =
+    document.getElementById("name").value.trim();
+
+  const studentRoom =
+    document.getElementById("room").value.trim();
+
+  const selectedSymptom = document.getElementById("symptom").value;
+  const care = symptomCareMap[selectedSymptom];
+  const selectedMedicine = care && care.medicine;
+  const symptom = care && care.label;
+
+  if (!studentId || !studentName || !studentRoom ||
+      !selectedMedicine || !symptom) {
+    showMessage("กรุณากรอกข้อมูลให้ครบทุกช่อง", "error");
+    return;
+  }
+
+  if (!isValidStudentId(studentId)) {
+    showMessage("รหัสนักศึกษาต้องเป็นตัวเลข 5-15 หลัก", "error");
+    return;
+  }
+
+  if (!medicineData[selectedMedicine]) {
+    showMessage("ไม่พบชนิดยาที่เลือก", "error");
+    return;
+  }
+
+  if (!currentSubmissionId) {
+    currentSubmissionId =
+      window.crypto && crypto.randomUUID
+        ? crypto.randomUUID()
+        : "MB-" + Date.now() + "-" +
+          Math.random().toString(36).slice(2);
+  }
+
+  submitButton.disabled = true;
+  submitButton.textContent = "กำลังตรวจสอบ...";
+  showMessage(
+    "ระบบกำลังตรวจสอบเงื่อนไข กรุณารอสักครู่...",
+    "warning"
+  );
+
+  try {
+    const result = await postAction("saveRequest", {
+      submissionId: currentSubmissionId,
+      studentId: studentId,
+      name: studentName,
+      room: studentRoom,
+      medicine: selectedMedicine,
+      symptom: symptom
+    });
+
+    if (result.deviceTest === "queued") {
+      try {
+        await queueFirebaseLedTest(result.requestId);
+      } catch (firebaseError) {
+        console.error("FIREBASE LED TEST ERROR:", firebaseError);
+      }
+    }
+
+    currentSubmissionId = null;
+
+    showSuccessPage({
+      requestId: result.requestId,
+      remaining: result.remaining,
+      unlimitedQuota: result.unlimitedQuota,
+      message: result.message,
+      deviceTest: result.deviceTest,
+      name: studentName,
+      room: studentRoom,
+      symptom: symptom
+    });
+
+  } catch (error) {
+    console.error("MEDICINE BOX ERROR:", error);
+
+    showMessage(
+      error.message || "เกิดข้อผิดพลาด กรุณาลองอีกครั้ง",
+      "error"
+    );
+
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = "ส่งคำขอให้เจ้าหน้าที่ตรวจสอบ";
+  }
+});
+
+// ==========================================
+// แสดงหน้าสำเร็จ
+// ==========================================
+
+function showSuccessPage(data) {
+  document.getElementById("successRequestId").textContent =
+    data.requestId || "-";
+
+  document.getElementById("successName").textContent =
+    data.name;
+
+  document.getElementById("successRoom").textContent =
+    data.room;
+
+  document.getElementById("successSymptom").textContent =
+    data.symptom;
+
+  const remainingElement =
+    document.getElementById("successRemaining");
+
+  const deviceTestMessage = data.deviceTest === "queued"
+    ? "กำลังทดสอบการเชื่อมต่อกับตู้ยา (ไฟ LED เท่านั้น)"
+    : data.deviceTest === "already_queued"
+      ? "มีการทดสอบการเชื่อมต่อกับตู้ยาสำหรับรายการนี้แล้ว"
+      : "";
+
+  document.getElementById("successServerMessage").textContent = [
+    data.message || "ไม่พบสถานะจากระบบ",
+    deviceTestMessage
+  ].filter(Boolean).join(" ");
+
+  if (remainingElement) {
+    remainingElement.textContent =
+      data.unlimitedQuota ? "ไม่จำกัด (บัญชีทดสอบ)" : data.remaining + " รายการ";
+  }
+
+  formView.hidden = true;
+  successView.hidden = false;
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+}
+
+// ==========================================
+// กลับหน้าหลัก
+// ==========================================
+
+backButton.addEventListener("click", function () {
+  const member = getSavedMember();
+  clearRequestFields();
+
+  message.textContent = "";
+  message.className = "message";
+
+  if (member) {
+    showRequestView(member);
+  } else {
+    showRegistrationView();
+  }
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+});
+
+// ==========================================
+// แสดงข้อความ
+// ==========================================
+
+function showMessage(text, type) {
+  message.textContent = text;
+  message.className = "message " + type;
+}
+
+window.MedicineBox = {
+  registerMember,
+  loginMember,
+  restoreMemberSession,
+  signOut
+};
+
+restoreMemberSession();
