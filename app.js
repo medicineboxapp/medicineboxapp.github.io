@@ -53,7 +53,7 @@ const MEMBER_STORAGE_KEY = "medicineBoxMember";
 let currentSubmissionId = null;
 
 function normalizeStudentId(studentId) {
-  return String(studentId || "").replace(/[\s\u200B-\u200D\uFEFF-]/g, "");
+  return String(studentId || "").replace(/[\s\u200B-\u200F\u2060\uFEFF-]/g, "");
 }
 
 function isValidStudentId(studentId) {
