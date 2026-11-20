@@ -9,13 +9,20 @@ const FIREBASE_COMMAND_URL =
 const medicineData = {
   paracetamol: { name: "พาราเซตามอล" },
   carminative: { name: "ยาแก้ท้องอืด (รอเจ้าหน้าที่พิจารณา)" },
-  allergy: { name: "ยาแก้แพ้" },
-  cough: { name: "ยาแก้ไอ" }
+  ors: { name: "ผงเกลือแร่ ORS (รอเจ้าหน้าที่พิจารณา)" },
+  antacid: { name: "ยาลดกรด (รอเจ้าหน้าที่พิจารณา)" }
 };
 
 const symptomCareMap = {
   headache: { medicine: "paracetamol", label: "ปวดหัว" },
-  stomachache: { medicine: "carminative", label: "ปวดท้อง/ท้องอืด" }
+  stomachache: { medicine: "carminative", label: "ปวดท้อง/ท้องอืด" },
+  diarrhea: { medicine: "ors", label: "ท้องเสียเล็กน้อย" },
+  indigestion: { medicine: "antacid", label: "แสบท้อง/อาหารไม่ย่อย" },
+  migraine: {
+    label: "สงสัยไมเกรน",
+    referral: true,
+    message: "กรุณาแจ้งเจ้าหน้าที่ห้องพยาบาลเพื่อประเมินอาการไมเกรน"
+  }
 };
 
 const medicineForm = document.getElementById("medicineForm");
@@ -198,7 +205,21 @@ function updateCareSummary() {
   const care = symptomCareMap[symptomSelect.value];
   const medicine = care && medicineData[care.medicine];
 
-  if (!care || !medicine) {
+  if (!care) {
+    medicineSelect.value = "";
+    careSummaryText.textContent = "-";
+    careSummary.hidden = true;
+    return;
+  }
+
+  if (care.referral) {
+    medicineSelect.value = "";
+    careSummaryText.textContent = care.message;
+    careSummary.hidden = false;
+    return;
+  }
+
+  if (!medicine) {
     medicineSelect.value = "";
     careSummaryText.textContent = "-";
     careSummary.hidden = true;
@@ -401,6 +422,11 @@ medicineForm.addEventListener("submit", async function (event) {
   const care = symptomCareMap[selectedSymptom];
   const selectedMedicine = care && care.medicine;
   const symptom = care && care.label;
+
+  if (care && care.referral) {
+    showMessage(care.message, "warning");
+    return;
+  }
 
   if (!studentId || !studentName || !studentRoom ||
       !selectedMedicine || !symptom) {
