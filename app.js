@@ -36,6 +36,11 @@ const registrationLevel = document.getElementById("registrationLevel");
 const registrationPhone = document.getElementById("registrationPhone");
 const registrationSubmitButton = document.getElementById("registrationSubmitButton");
 const loginButton = document.getElementById("loginButton");
+const showRegistrationButton = document.getElementById("showRegistrationButton");
+const backToLoginButton = document.getElementById("backToLoginButton");
+const authTitle = document.getElementById("authTitle");
+const authSubtitle = document.getElementById("authSubtitle");
+const registrationOnlyGroups = document.querySelectorAll(".auth-registration-only");
 const registrationMessage = document.getElementById("registrationMessage");
 const signOutButton = document.getElementById("signOutButton");
 
@@ -106,7 +111,30 @@ function showRegistrationMessage(text, type) {
   registrationMessage.className = "message " + type;
 }
 
+function setAuthMode(mode) {
+  const isSignup = mode === "signup";
+
+  registrationView.dataset.authMode = isSignup ? "signup" : "login";
+  authTitle.textContent = isSignup ? "สมัครสมาชิก" : "เข้าสู่ระบบ";
+  authSubtitle.textContent = isSignup
+    ? "กรอกข้อมูลให้ครบถ้วนเพื่อลงทะเบียนใช้งาน"
+    : "กรอกรหัสนักศึกษาและเบอร์โทรเพื่อเข้าสู่ระบบ";
+
+  registrationOnlyGroups.forEach(function (group) {
+    group.hidden = !isSignup;
+  });
+
+  registrationName.required = isSignup;
+  registrationProgram.required = isSignup;
+  registrationLevel.required = isSignup;
+  loginButton.hidden = isSignup;
+  showRegistrationButton.hidden = isSignup;
+  registrationSubmitButton.hidden = !isSignup;
+  backToLoginButton.hidden = !isSignup;
+}
+
 function showRegistrationView() {
+  setAuthMode("login");
   registrationView.hidden = false;
   formView.hidden = true;
   successView.hidden = true;
@@ -275,6 +303,18 @@ registrationForm.addEventListener("submit", async function (event) {
     registrationSubmitButton.disabled = false;
     registrationSubmitButton.textContent = "สมัครสมาชิก";
   }
+});
+
+showRegistrationButton.addEventListener("click", function () {
+  registrationForm.reset();
+  showRegistrationMessage("", "");
+  setAuthMode("signup");
+});
+
+backToLoginButton.addEventListener("click", function () {
+  registrationForm.reset();
+  showRegistrationMessage("", "");
+  setAuthMode("login");
 });
 
 signOutButton.addEventListener("click", signOut);

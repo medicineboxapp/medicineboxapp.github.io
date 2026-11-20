@@ -27,13 +27,13 @@
          หน้าสมัครสมาชิก
     ====================================== -->
 
-    <section id="registrationView" class="form-card registration-card">
+    <section id="registrationView" class="form-card registration-card" data-auth-mode="login">
 
       <div class="icon">🪪</div>
 
-      <h1>เข้าสู่ระบบ</h1>
+      <h1 id="authTitle">เข้าสู่ระบบ</h1>
 
-      <p class="subtitle">
+      <p id="authSubtitle" class="subtitle">
         MEDICINE BOX
         <br>
         ระบบลงทะเบียนรับยาของวิทยาลัย
@@ -41,7 +41,7 @@
 
       <form id="registrationForm">
 
-        <div class="form-group">
+        <div id="registrationNameGroup" class="form-group auth-registration-only" hidden>
           <label for="registrationName">ชื่อ-นามสกุล</label>
           <input
             type="text"
@@ -49,7 +49,6 @@
             placeholder="กรอกชื่อ-นามสกุล"
             maxlength="100"
             autocomplete="name"
-            required
           >
         </div>
 
@@ -66,14 +65,14 @@
           >
         </div>
 
-        <div class="form-group">
+        <div id="registrationProgramGroup" class="form-group auth-registration-only" hidden>
           <label for="registrationProgram">สาขาวิชา</label>
-          <input type="text" id="registrationProgram" placeholder="กรอกสาขาวิชา" maxlength="100" required>
+          <input type="text" id="registrationProgram" placeholder="กรอกสาขาวิชา" maxlength="100">
         </div>
 
-        <div class="form-group">
+        <div id="registrationLevelGroup" class="form-group auth-registration-only" hidden>
           <label for="registrationLevel">ระดับชั้น</label>
-          <input type="text" id="registrationLevel" placeholder="เช่น ปวช.3" maxlength="50" required>
+          <input type="text" id="registrationLevel" placeholder="เช่น ปวช.3" maxlength="50">
         </div>
 
         <div class="form-group">
@@ -85,8 +84,16 @@
           เข้าสู่ระบบ
         </button>
 
-        <button type="submit" id="registrationSubmitButton">
+        <button type="button" id="showRegistrationButton">
           สมัครสมาชิก
+        </button>
+
+        <button type="submit" id="registrationSubmitButton" hidden>
+          ยืนยันสมัครสมาชิก
+        </button>
+
+        <button type="button" id="backToLoginButton" class="secondary-button" hidden>
+          กลับไปเข้าสู่ระบบ
         </button>
 
       </form>
