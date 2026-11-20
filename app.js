@@ -136,6 +136,16 @@ function setAuthMode(mode) {
   backToLoginButton.hidden = !isSignup;
 }
 
+function showSignupForNewMember() {
+  const studentId = normalizeStudentId(registrationStudentId.value);
+  const phone = String(registrationPhone.value || "").replace(/\D/g, "");
+
+  setAuthMode("signup");
+  registrationStudentId.value = studentId;
+  registrationPhone.value = phone;
+  showRegistrationMessage("ยังไม่พบข้อมูลสมาชิก กรุณากรอกข้อมูลเพื่อลงทะเบียนใช้งาน", "warning");
+}
+
 function showRegistrationView() {
   setAuthMode("login");
   registrationView.hidden = false;
@@ -359,7 +369,11 @@ loginButton.addEventListener("click", async function () {
     await loginMember(registrationStudentId.value, registrationPhone.value);
     showRegistrationMessage("", "");
   } catch (error) {
-    showRegistrationMessage(error.message || "ไม่สามารถเข้าสู่ระบบได้", "error");
+    if (error.message === "รหัสนักศึกษานี้ยังไม่ได้สมัครใช้งาน") {
+      showSignupForNewMember();
+    } else {
+      showRegistrationMessage(error.message || "ไม่สามารถเข้าสู่ระบบได้", "error");
+    }
   } finally {
     loginButton.disabled = false;
   }
@@ -545,7 +559,8 @@ window.MedicineBox = {
   registerMember,
   loginMember,
   restoreMemberSession,
-  signOut
+  signOut,
+  showSignupForNewMember
 };
 
 restoreMemberSession();
