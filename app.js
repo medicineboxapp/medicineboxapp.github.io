@@ -20,6 +20,9 @@ const symptomCareMap = {
 
 const medicineForm = document.getElementById("medicineForm");
 const medicineSelect = document.getElementById("medicine");
+const symptomSelect = document.getElementById("symptom");
+const careSummary = document.getElementById("careSummary");
+const careSummaryText = document.getElementById("careSummaryText");
 
 const message = document.getElementById("message");
 const submitButton = document.getElementById("submitBtn");
@@ -176,8 +179,25 @@ function getSavedMember() {
 function clearRequestFields() {
   document.getElementById("room").value = "";
   medicineSelect.value = "";
-  document.getElementById("symptom").value = "";
+  symptomSelect.value = "";
+  updateCareSummary();
   currentSubmissionId = null;
+}
+
+function updateCareSummary() {
+  const care = symptomCareMap[symptomSelect.value];
+  const medicine = care && medicineData[care.medicine];
+
+  if (!care || !medicine) {
+    medicineSelect.value = "";
+    careSummaryText.textContent = "-";
+    careSummary.hidden = true;
+    return;
+  }
+
+  medicineSelect.value = care.medicine;
+  careSummaryText.textContent = care.label + " → " + medicine.name;
+  careSummary.hidden = false;
 }
 
 async function registerMember(name, studentId, program, level, phone) {
@@ -326,6 +346,8 @@ medicineForm.addEventListener("input", function () {
 medicineForm.addEventListener("change", function () {
   currentSubmissionId = null;
 });
+
+symptomSelect.addEventListener("change", updateCareSummary);
 
 loginButton.addEventListener("click", async function () {
   if (loginButton.disabled) return;
