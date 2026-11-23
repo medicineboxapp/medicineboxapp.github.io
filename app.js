@@ -249,6 +249,10 @@ async function registerMember(name, studentId, program, level, phone) {
     throw new Error("กรุณากรอกสาขาวิชา ระดับชั้น และเบอร์โทรให้ถูกต้อง");
   }
 
+  if (!/^ปว[ชส]\.[1-3]$/.test(cleanLevel)) {
+    throw new Error("กรุณาเลือกระดับชั้นจากรายการ");
+  }
+
   const result = await postAction("register", {
     name: cleanName,
     studentId: cleanStudentId,
