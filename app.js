@@ -2,10 +2,6 @@
 const SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbz_tASkriYHt3K4bHQrXs-MSwaEZTzKlViYlSXezHpP1NOhwtfV0Z4EodJRXhqFHpAsUw/exec";
 
-// Temporary Firebase test channel: LED only. No student or health data is sent here.
-const FIREBASE_COMMAND_URL =
-  "https://medicine-box-realtime-test-default-rtdb.asia-southeast1.firebasedatabase.app/devices/medicine-box-001/command.json";
-
 const medicineData = {
   paracetamol: { name: "พาราเซตามอล" },
   carminative: { name: "ยาแก้ท้องอืด (รอเจ้าหน้าที่พิจารณา)" },
@@ -93,27 +89,6 @@ async function postAction(action, data = {}) {
   }
 
   return result;
-}
-
-async function queueFirebaseLedTest(requestId) {
-  if (!requestId) {
-    throw new Error("ไม่พบรหัสคำขอสำหรับการทดสอบตู้ยา");
-  }
-
-  const response = await fetch(FIREBASE_COMMAND_URL, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      commandId: "LED-" + requestId,
-      command: "TEST_LED",
-      status: "queued",
-      queuedAt: Date.now()
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error("ไม่สามารถส่งคำสั่งทดสอบไปยังตู้ยาได้");
-  }
 }
 
 function showRegistrationMessage(text, type) {
@@ -472,14 +447,6 @@ medicineForm.addEventListener("submit", async function (event) {
       medicine: selectedMedicine,
       symptom: symptom
     });
-
-    if (result.deviceTest === "queued") {
-      try {
-        await queueFirebaseLedTest(result.requestId);
-      } catch (firebaseError) {
-        console.error("FIREBASE LED TEST ERROR:", firebaseError);
-      }
-    }
 
     currentSubmissionId = null;
 
