@@ -9,6 +9,17 @@ const medicineData = {
   antacid: { name: "ยาลดกรด (รอเจ้าหน้าที่พิจารณา)" }
 };
 
+const medicineShortName = {
+  paracetamol: "พาราเซตามอล",
+  carminative: "ยาขับลม",
+  ors: "ผงเกลือแร่ ORS",
+  antacid: "ยาลดกรด"
+};
+
+const PICKER_PLACEHOLDER = "-- เลือกอาการ --";
+const PICKER_PLACEHOLDER_HINT = "แตะเพื่อเลือกอาการ";
+const REFERRAL_HINT = "แจ้งเจ้าหน้าที่ · ไม่เสนอยา";
+
 const symptomCareMap = {
   headache: { medicine: "paracetamol", label: "ปวดหัว" },
   stomachache: { medicine: "carminative", label: "ปวดท้อง/ท้องอืด" },
@@ -26,6 +37,10 @@ const medicineSelect = document.getElementById("medicine");
 const symptomSelect = document.getElementById("symptom");
 const careSummary = document.getElementById("careSummary");
 const careSummaryText = document.getElementById("careSummaryText");
+const symptomField = document.getElementById("symptomField");
+const symptomTrigger = document.getElementById("symptomTrigger");
+const symptomList = document.getElementById("symptomList");
+let activeSymptomIndex = -1;
 
 const message = document.getElementById("message");
 const submitButton = document.getElementById("submitBtn");
@@ -49,8 +64,78 @@ const authSubtitle = document.getElementById("authSubtitle");
 const registrationOnlyGroups = document.querySelectorAll(".auth-registration-only");
 const registrationMessage = document.getElementById("registrationMessage");
 const signOutButton = document.getElementById("signOutButton");
+const memberProfile = document.getElementById("memberProfile");
+
+const MISSING_LEVEL_MESSAGE = "ไม่พบระดับชั้นในข้อมูลสมาชิก กรุณาติดต่อเจ้าหน้าที่";
+
+function setView(view) {
+  document.body.dataset.view = view;
+  memberProfile.hidden = view !== "request";
+}
 
 const MEMBER_STORAGE_KEY = "medicineBoxMember";
+
+// ==========================================
+// ปุ่มแบบ "ก้อนเหนียว"
+// ==========================================
+
+const BLOB_PAUSE_MS = 400;
+let lastPointerType = "mouse";
+
+function decorateBlobButtons(root = document) {
+  root.querySelectorAll(".blob-btn").forEach(function (button) {
+    if (button.querySelector(".blob-label")) return;
+    const label = document.createElement("span");
+    label.className = "blob-label";
+    label.textContent = button.textContent.trim();
+    const fill = document.createElement("span");
+    fill.className = "blob-fill";
+    fill.setAttribute("aria-hidden", "true");
+    const goo = document.createElement("span");
+    goo.className = "blob-goo";
+    for (let i = 0; i < 4; i++) {
+      const blob = document.createElement("span");
+      blob.className = "blob";
+      goo.append(blob);
+    }
+    fill.append(goo);
+    button.replaceChildren(label, fill);
+  });
+}
+
+function setButtonLabel(button, text) {
+  const label = button.querySelector(".blob-label");
+  if (label) label.textContent = text;
+  else button.textContent = text;
+}
+
+function prefersReducedMotion() {
+  return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+}
+
+// บนมือถือ ให้ก้อนสีไหลเต็มปุ่มก่อนทำงานต่อ
+function blobPause() {
+  if (lastPointerType !== "touch" || prefersReducedMotion()) return Promise.resolve();
+  return new Promise(function (resolve) {
+    setTimeout(resolve, BLOB_PAUSE_MS);
+  });
+}
+
+document.addEventListener("pointerdown", function (event) {
+  lastPointerType = event.pointerType || "mouse";
+  if (lastPointerType !== "touch") return;
+  const button = event.target.closest && event.target.closest(".blob-btn");
+  if (!button) return;
+  button.classList.add("is-pressed");
+  setTimeout(function () {
+    button.classList.remove("is-pressed");
+  }, BLOB_PAUSE_MS + 200);
+}, true);
+
+decorateBlobButtons();
+
+// สถานะกำลังทำงาน แยกจาก disabled เพื่อให้ปุ่มยังเล่นเอฟเฟกต์ระหว่างรอ
+const busy = { register: false, login: false, request: false };
 
 // เก็บรหัสเดิมไว้เมื่อส่งข้อมูลแล้วเครือข่ายขัดข้อง
 let currentSubmissionId = null;
@@ -134,11 +219,13 @@ function showRegistrationView() {
   formView.hidden = true;
   successView.hidden = true;
   signOutButton.hidden = true;
+  setView("auth");
 }
 
 function showRequestView(member) {
   document.getElementById("studentId").value = member.studentId;
   document.getElementById("name").value = member.name;
+  document.getElementById("room").value = member.level || "";
   document.getElementById("profileName").textContent = member.name;
   document.getElementById("profileStudentId").textContent = member.studentId;
   document.getElementById("profileProgram").textContent = member.program || "-";
@@ -149,6 +236,7 @@ function showRequestView(member) {
   formView.hidden = false;
   successView.hidden = true;
   signOutButton.hidden = false;
+  setView("request");
 }
 
 function saveMemberSession(member) {
@@ -169,7 +257,7 @@ function getSavedMember() {
 }
 
 function clearRequestFields() {
-  document.getElementById("room").value = "";
+  closeSymptomList();
   medicineSelect.value = "";
   symptomSelect.value = "";
   updateCareSummary();
@@ -178,6 +266,8 @@ function clearRequestFields() {
 
 function updateCareSummary() {
   const care = symptomCareMap[symptomSelect.value];
+  syncSymptomPicker();
+  submitButton.disabled = busy.request || !!(care && care.referral);
   const medicine = care && medicineData[care.medicine];
 
   if (!care) {
@@ -205,6 +295,129 @@ function updateCareSummary() {
   careSummaryText.textContent = care.label + " → " + medicine.name;
   careSummary.hidden = false;
 }
+
+// ==========================================
+// รายการอาการแบบตกแต่ง (ควบคุม <select id="symptom"> ที่ซ่อนไว้)
+// ==========================================
+
+function symptomHint(value) {
+  const care = symptomCareMap[value];
+  if (!care) return PICKER_PLACEHOLDER_HINT;
+  if (care.referral) return REFERRAL_HINT;
+  return "เสนอ: " + medicineShortName[care.medicine];
+}
+
+function symptomOptions() {
+  return Array.from(symptomList.querySelectorAll('[role="option"]'));
+}
+
+function buildSymptomList() {
+  Object.entries(symptomCareMap).forEach(function ([value, care]) {
+    const item = document.createElement("li");
+    item.id = "symptomOption-" + value;
+    item.setAttribute("role", "option");
+    item.setAttribute("aria-selected", "false");
+    item.dataset.value = value;
+    item.className = "picker-option" + (care.referral ? " is-referral" : "");
+
+    const dot = document.createElement("span");
+    dot.className = "picker-dot";
+    dot.setAttribute("aria-hidden", "true");
+
+    const text = document.createElement("span");
+    text.className = "picker-text";
+    const label = document.createElement("span");
+    label.className = "picker-label";
+    label.textContent = care.label;
+    const hint = document.createElement("span");
+    hint.className = "picker-hint";
+    hint.textContent = symptomHint(value);
+    text.append(label, hint);
+
+    item.append(dot, text);
+    item.addEventListener("click", function () {
+      selectSymptom(value);
+      symptomTrigger.focus();
+    });
+    symptomList.append(item);
+  });
+}
+
+function setActiveSymptom(index) {
+  const options = symptomOptions();
+  activeSymptomIndex = Math.max(0, Math.min(index, options.length - 1));
+  options.forEach(function (option, i) {
+    option.classList.toggle("is-active", i === activeSymptomIndex);
+  });
+  symptomTrigger.setAttribute("aria-activedescendant", options[activeSymptomIndex].id);
+}
+
+function openSymptomList() {
+  symptomList.hidden = false;
+  symptomTrigger.setAttribute("aria-expanded", "true");
+  const selected = symptomOptions().findIndex(function (option) {
+    return option.dataset.value === symptomSelect.value;
+  });
+  setActiveSymptom(selected === -1 ? 0 : selected);
+}
+
+function closeSymptomList() {
+  symptomList.hidden = true;
+  symptomTrigger.setAttribute("aria-expanded", "false");
+  symptomTrigger.removeAttribute("aria-activedescendant");
+  activeSymptomIndex = -1;
+}
+
+function selectSymptom(value) {
+  symptomSelect.value = value;
+  symptomSelect.dispatchEvent(new Event("change", { bubbles: true }));
+  closeSymptomList();
+}
+
+function syncSymptomPicker() {
+  const value = symptomSelect.value;
+  const care = symptomCareMap[value];
+  symptomTrigger.querySelector(".picker-label").textContent = care ? care.label : PICKER_PLACEHOLDER;
+  symptomTrigger.querySelector(".picker-hint").textContent = symptomHint(value);
+  symptomTrigger.classList.toggle("has-value", !!care);
+  symptomTrigger.classList.toggle("is-referral", !!(care && care.referral));
+  symptomOptions().forEach(function (option) {
+    option.setAttribute("aria-selected", String(option.dataset.value === value));
+  });
+}
+
+buildSymptomList();
+
+symptomTrigger.addEventListener("click", function () {
+  if (symptomList.hidden) openSymptomList();
+  else closeSymptomList();
+});
+
+symptomTrigger.addEventListener("keydown", function (event) {
+  const isOpen = !symptomList.hidden;
+
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    if (!isOpen) {
+      openSymptomList();
+      return;
+    }
+    setActiveSymptom(activeSymptomIndex + (event.key === "ArrowDown" ? 1 : -1));
+  } else if ((event.key === "Enter" || event.key === " ") && isOpen) {
+    event.preventDefault();
+    selectSymptom(symptomOptions()[activeSymptomIndex].dataset.value);
+  } else if (event.key === "Escape" && isOpen) {
+    event.preventDefault();
+    closeSymptomList();
+    symptomTrigger.focus();
+  }
+});
+
+document.addEventListener("click", function (event) {
+  if (!symptomList.hidden && !symptomField.contains(event.target)) {
+    closeSymptomList();
+  }
+});
 
 async function registerMember(name, studentId, program, level, phone) {
   const cleanName = String(name || "").trim();
@@ -310,6 +523,7 @@ async function restoreMemberSession() {
 
 function signOut() {
   localStorage.removeItem(MEMBER_STORAGE_KEY);
+  clearRequestFields();
   registrationForm.reset();
   showRegistrationMessage("", "");
   showRegistrationView();
@@ -318,10 +532,12 @@ function signOut() {
 registrationForm.addEventListener("submit", async function (event) {
   event.preventDefault();
 
-  if (registrationSubmitButton.disabled) return;
+  if (busy.register) return;
+  busy.register = true;
 
+  await blobPause();
   registrationSubmitButton.disabled = true;
-  registrationSubmitButton.textContent = "กำลังสมัคร...";
+  setButtonLabel(registrationSubmitButton, "กำลังสมัคร...");
   showRegistrationMessage("กำลังบันทึกข้อมูลสมาชิก...", "warning");
 
   try {
@@ -330,12 +546,14 @@ registrationForm.addEventListener("submit", async function (event) {
   } catch (error) {
     showRegistrationMessage(error.message || "ไม่สามารถสมัครได้", "error");
   } finally {
+    busy.register = false;
     registrationSubmitButton.disabled = false;
-    registrationSubmitButton.textContent = "สมัครสมาชิก";
+    setButtonLabel(registrationSubmitButton, "ยืนยันสมัครสมาชิก");
   }
 });
 
-showRegistrationButton.addEventListener("click", function () {
+showRegistrationButton.addEventListener("click", async function () {
+  await blobPause();
   registrationForm.reset();
   showRegistrationMessage("", "");
   setAuthMode("signup");
@@ -360,8 +578,10 @@ medicineForm.addEventListener("change", function () {
 symptomSelect.addEventListener("change", updateCareSummary);
 
 loginButton.addEventListener("click", async function () {
-  if (loginButton.disabled) return;
+  if (busy.login) return;
+  busy.login = true;
 
+  await blobPause();
   loginButton.disabled = true;
   showRegistrationMessage("กำลังตรวจสอบข้อมูลสมาชิก...", "warning");
 
@@ -375,6 +595,7 @@ loginButton.addEventListener("click", async function () {
       showRegistrationMessage(error.message || "ไม่สามารถเข้าสู่ระบบได้", "error");
     }
   } finally {
+    busy.login = false;
     loginButton.disabled = false;
   }
 });
@@ -386,7 +607,7 @@ loginButton.addEventListener("click", async function () {
 medicineForm.addEventListener("submit", async function (event) {
   event.preventDefault();
 
-  if (submitButton.disabled) return;
+  if (busy.request || submitButton.disabled) return;
 
   const studentId =
     document.getElementById("studentId").value.trim();
@@ -404,6 +625,11 @@ medicineForm.addEventListener("submit", async function (event) {
 
   if (care && care.referral) {
     showMessage(care.message, "warning");
+    return;
+  }
+
+  if (!studentRoom) {
+    showMessage(MISSING_LEVEL_MESSAGE, "warning");
     return;
   }
 
@@ -431,8 +657,12 @@ medicineForm.addEventListener("submit", async function (event) {
           Math.random().toString(36).slice(2);
   }
 
+  busy.request = true;
+  symptomTrigger.disabled = true;
+  closeSymptomList();
+  await blobPause();
   submitButton.disabled = true;
-  submitButton.textContent = "กำลังตรวจสอบ...";
+  setButtonLabel(submitButton, "กำลังตรวจสอบ...");
   showMessage(
     "ระบบกำลังตรวจสอบเงื่อนไข กรุณารอสักครู่...",
     "warning"
@@ -470,8 +700,10 @@ medicineForm.addEventListener("submit", async function (event) {
     );
 
   } finally {
-    submitButton.disabled = false;
-    submitButton.textContent = "ส่งคำขอให้เจ้าหน้าที่ตรวจสอบ";
+    busy.request = false;
+    symptomTrigger.disabled = false;
+    updateCareSummary();
+    setButtonLabel(submitButton, "ส่งคำขอให้เจ้าหน้าที่ตรวจสอบ");
   }
 });
 
@@ -513,6 +745,7 @@ function showSuccessPage(data) {
 
   formView.hidden = true;
   successView.hidden = false;
+  setView("success");
 
   window.scrollTo({
     top: 0,
@@ -524,7 +757,8 @@ function showSuccessPage(data) {
 // กลับหน้าหลัก
 // ==========================================
 
-backButton.addEventListener("click", function () {
+backButton.addEventListener("click", async function () {
+  await blobPause();
   const member = getSavedMember();
   clearRequestFields();
 

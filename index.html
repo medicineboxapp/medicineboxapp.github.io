@@ -4,21 +4,50 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#167ac6">
-  <meta name="description" content="MEDICINE BOX ระบบลงทะเบียนรับยาของวิทยาลัย">
-  <title>MEDICINE BOX | ระบบลงทะเบียนรับยา</title>
+  <meta name="theme-color" content="#62A5FC">
+  <meta name="description" content="MEDICINE BOX ระบบลงทะเบียนรับยาออนไลน์ วิทยาลัยเทคนิคชุมแพ">
+  <title>MEDICINE BOX | วิทยาลัยเทคนิคชุมแพ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+Thai:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
+  <!-- ฟิลเตอร์ "ก้อนเหนียว" สำหรับปุ่ม -->
+  <svg class="svg-defs" aria-hidden="true" width="0" height="0" focusable="false">
+    <defs>
+      <filter id="mbx-goo">
+        <feGaussianBlur in="SourceGraphic" result="blur" stdDeviation="10"></feGaussianBlur>
+        <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 21 -7" result="goo"></feColorMatrix>
+        <feBlend in2="goo" in="SourceGraphic" result="mix"></feBlend>
+      </filter>
+    </defs>
+  </svg>
+
   <!-- ส่วนหัวเว็บไซต์ -->
   <header class="header">
-    <div class="logo">✚ MEDICINE BOX</div>
-    <p>ระบบลงทะเบียนรับยาของวิทยาลัย</p>
-    <button type="button" id="signOutButton" class="sign-out-button" hidden>
-      ออกจากระบบ
-    </button>
+    <div class="brand">
+      <img src="assets/ctc-logo.png" alt="ตราวิทยาลัยเทคนิคชุมแพ" class="crest" width="112" height="112">
+      <div class="brand-text">
+        <span class="brand-label">MEDICINE BOX</span>
+        <h1 class="college-name">วิทยาลัยเทคนิคชุมแพ</h1>
+        <p class="brand-tagline">ระบบลงทะเบียนรับยาออนไลน์</p>
+      </div>
+      <button type="button" id="signOutButton" class="sign-out-button" hidden>
+        ออกจากระบบ
+      </button>
+    </div>
+
+    <section id="memberProfile" class="profile-card" hidden aria-label="ข้อมูลสมาชิก">
+      <div class="profile-avatar" aria-hidden="true">✚</div>
+      <div class="profile-text">
+        <strong id="profileName">-</strong>
+        <span class="profile-meta"><span id="profileStudentId">-</span> · <span id="profileProgram">-</span> · <span id="profileLevel">-</span></span>
+        <span class="profile-phone" id="profilePhone">-</span>
+      </div>
+    </section>
   </header>
 
   <main class="container">
@@ -29,15 +58,9 @@
 
     <section id="registrationView" class="form-card registration-card" data-auth-mode="login">
 
-      <div class="icon">🪪</div>
+      <h2 id="authTitle" class="card-title">เข้าสู่ระบบ</h2>
 
-      <h1 id="authTitle">เข้าสู่ระบบ</h1>
-
-      <p id="authSubtitle" class="subtitle">
-        MEDICINE BOX
-        <br>
-        ระบบลงทะเบียนรับยาของวิทยาลัย
-      </p>
+      <p id="authSubtitle" class="subtitle">กรอกรหัสนักศึกษาและเบอร์โทรเพื่อเข้าสู่ระบบ</p>
 
       <form id="registrationForm">
 
@@ -87,19 +110,19 @@
           <input type="tel" id="registrationPhone" placeholder="เช่น 0812345678" maxlength="15" inputmode="tel" required>
         </div>
 
-        <button type="button" id="loginButton" class="secondary-button">
+        <button type="button" id="loginButton" class="blob-btn">
           เข้าสู่ระบบ
         </button>
 
-        <button type="button" id="showRegistrationButton">
+        <button type="button" id="showRegistrationButton" class="blob-btn blob-btn--secondary">
           สมัครสมาชิก
         </button>
 
-        <button type="submit" id="registrationSubmitButton" hidden>
+        <button type="submit" id="registrationSubmitButton" class="blob-btn" hidden>
           ยืนยันสมัครสมาชิก
         </button>
 
-        <button type="button" id="backToLoginButton" class="secondary-button" hidden>
+        <button type="button" id="backToLoginButton" class="text-button" hidden>
           กลับไปเข้าสู่ระบบ
         </button>
 
@@ -126,82 +149,38 @@
 
     <section id="formView" class="form-card" hidden>
 
-      <div class="clinical-form-header">
-        <div class="icon">💊</div>
-        <span class="form-section-title">MEDICINE BOX</span>
-        <h1>ลงทะเบียนรับยา</h1>
-      </div>
+      <h2 class="card-title">ลงทะเบียนรับยา</h2>
 
-      <p class="subtitle">
-        กรุณากรอกข้อมูลเพื่อส่งคำขอรับยา
-        เจ้าหน้าที่จะตรวจสอบก่อนดำเนินการ
-      </p>
-
-      <section id="memberProfile" class="notice">
-        <strong>ข้อมูลสมาชิก</strong><br>
-        <span id="profileName">-</span> · <span id="profileStudentId">-</span><br>
-        <span id="profileProgram">-</span> · <span id="profileLevel">-</span><br>
-        <span id="profilePhone">-</span>
-      </section>
+      <p class="subtitle">เลือกอาการเบื้องต้น แล้วส่งให้เจ้าหน้าที่ตรวจสอบ</p>
 
       <form id="medicineForm">
 
-        <p class="clinical-note">กรอกข้อมูลให้ครบถ้วนเพื่อส่งคำขอรับยา</p>
+        <input type="hidden" id="studentId">
+        <input type="hidden" id="name">
+        <input type="hidden" id="room">
 
-        <div class="form-group">
-          <label for="studentId">
-            1. รหัสประจำตัวนักศึกษา
-          </label>
+        <div class="form-group symptom-field" id="symptomField">
+          <span class="field-label" id="symptomLabel">อาการเบื้องต้น</span>
 
-          <input
-            type="text"
-            id="studentId"
-            placeholder="กรอกรหัสประจำตัวนักศึกษา"
-            maxlength="15"
-            inputmode="numeric"
-            pattern="[0-9]{5,15}"
-            readonly
-            required
+          <button
+            type="button"
+            id="symptomTrigger"
+            class="picker-trigger"
+            aria-haspopup="listbox"
+            aria-expanded="false"
+            aria-controls="symptomList"
+            aria-labelledby="symptomLabel symptomTrigger"
           >
-        </div>
+            <span class="picker-text">
+              <span class="picker-label">-- เลือกอาการ --</span>
+              <span class="picker-hint">แตะเพื่อเลือกอาการ</span>
+            </span>
+            <svg class="picker-chevron" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
 
-        <div class="form-group">
-          <label for="name">
-            2. ชื่อ-นามสกุล
-          </label>
+          <ul id="symptomList" class="picker-list" role="listbox" aria-labelledby="symptomLabel" hidden></ul>
 
-          <input
-            type="text"
-            id="name"
-            placeholder="กรอกชื่อ-นามสกุล"
-            maxlength="100"
-            autocomplete="name"
-            readonly
-            required
-          >
-        </div>
-
-        <div class="form-group">
-          <label for="room">
-            3. ระดับชั้น
-          </label>
-
-          <select id="room" required>
-            <option value="">-- เลือกระดับชั้น --</option>
-            <option value="ปวช.1">ปวช.1</option>
-            <option value="ปวช.2">ปวช.2</option>
-            <option value="ปวช.3">ปวช.3</option>
-            <option value="ปวส.1">ปวส.1</option>
-            <option value="ปวส.2">ปวส.2</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="symptom">
-            4. อาการเบื้องต้น
-          </label>
-
-          <select id="symptom" required>
+          <select id="symptom" hidden aria-hidden="true" tabindex="-1">
             <option value="">-- เลือกอาการ --</option>
             <option value="headache">ปวดหัว</option>
             <option value="stomachache">ปวดท้อง/ท้องอืด</option>
@@ -220,7 +199,7 @@
 
         <input type="hidden" id="medicine">
 
-        <button type="submit" id="submitBtn">
+        <button type="submit" id="submitBtn" class="blob-btn">
           ส่งคำขอให้เจ้าหน้าที่ตรวจสอบ
         </button>
 
@@ -316,7 +295,7 @@
 
 
       <p class="well-wish">
-        ขอบคุณที่ใช้บริการ MEDICINE BOX 💙
+        ขอบคุณที่ใช้บริการ MEDICINE BOX
       </p>
 
 
@@ -324,7 +303,7 @@
       <button
         type="button"
         id="backButton"
-        class="back-button"
+        class="blob-btn"
       >
         กลับหน้าหลัก
       </button>
